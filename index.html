@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduHub - Aprendizado Colaborativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+        .bg-gradient {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%);
+        }
+        .achievement {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        .flashcard {
+            perspective: 1000px;
+        }
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flashcard.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border-radius: 16px;
+        }
+        .flashcard-back {
+            transform: rotateY(180deg);
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+        }
+        .toast.show {
+            transform: translateX(0);
+        }
+        .toast.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        .toast.error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .ai-generate-section {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%);
+            border: 2px dashed #3b82f6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .ai-icon {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-2xl font-bold text-blue-600">EduHub</h1>
+                    </div>
+                    <nav class="hidden md:ml-8 md:flex md:space-x-8">
+                        <a href="#home" class="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Início</a>
+                        <a href="#flashcards" class="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Flashcards</a>
+                        <a href="#simulados" class="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Simulados</a>
+                        <a href="#perfil" class="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Perfil</a>
+                    </nav>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="loginBtn" class="text-blue-600 hover:text-blue-800 font-medium text-sm">Entrar</button>
+                    <button id="signupBtn" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all">Cadastrar</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="home" class="bg-gradient py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col lg:flex-row items-center">
+                <div class="lg:w-1/2 mb-10 lg:mb-0">
+                    <h2 class="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">Aprenda Juntos, Cresçam Juntos</h2>
+                    <p class="text-xl text-gray-700 mb-8">O EduHub é um espaço colaborativo onde alunos e professores criam, compartilham e organizam conteúdos de estudo. 100% gratuito e acessível.</p>
+                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                        <button id="ctaSignupBtn" class="btn-primary px-8 py-3 rounded-lg text-lg font-medium shadow-lg hover:shadow-xl transition-all">Começar Agora</button>
+                        <button id="ctaDemoBtn" class="bg-white text-blue-600 px-8 py-3 rounded-lg text-lg font-medium shadow hover:shadow-md transition-all">Ver Recursos</button>
+                    </div>
+                </div>
+                <div class="lg:w-1/2 flex justify-center">
+                    <div class="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full">
+                        <div class="text-center mb-6">
+                            <h3 class="text-2xl font-bold text-gray-900">Flashcard do Dia</h3>
+                        </div>
+                        <div class="flashcard bg-gradient-to-br from-blue-50 to-green-50 rounded-xl p-6 mb-6 h-48 flex items-center justify-center cursor-pointer" id="dailyFlashcard">
+                            <div class="flashcard-inner">
+                                <div class="flashcard-front">
+                                    <div class="text-center">
+                                        <p class="text-lg text-gray-800 font-medium">O que é fotossíntese?</p>
+                                        <button class="text-blue-600 hover:text-blue-800 font-medium text-sm mt-4">Clique para ver resposta</button>
+                                    </div>
+                                </div>
+                                <div class="flashcard-back bg-gradient-to-br from-green-50 to-blue-50">
+                                    <div class="text-center">
+                                        <p class="text-lg text-gray-800 font-medium">Processo pelo qual plantas convertem luz solar em energia química.</p>
+                                        <button class="text-blue-600 hover:text-blue-800 font-medium text-sm mt-4">Clique para ver pergunta</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between">
+                            <button class="w-1/2 bg-red-100 text-red-700 py-2 rounded-l-lg font-medium hover:bg-red-200 transition-colors">Errado</button>
+                            <button class="w-1/2 bg-green-100 text-green-700 py-2 rounded-r-lg font-medium hover:bg-green-200 transition-colors">Certo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Recursos Educacionais</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Ferramentas poderosas para transformar sua experiência de aprendizado</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Flashcards Card -->
+                <div id="flashcards" class="card-hover bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Flashcards Inteligentes</h3>
+                    <p class="text-gray-600 mb-6">Crie, organize e revise conteúdos com flashcards personalizados. Agora com IA para gerar resumos otimizados para memorização!</p>
+                    <ul class="space-y-2 mb-6">
+                        <li class="flex items-center text-sm text-gray-600">
+                            <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            Geração automática com IA
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            Resumos otimizados para memorização
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            Modo de revisão com espaçamento
+                        </li>
+                    </ul>
+                    <button class="w-full btn-primary py-3 rounded-lg font-medium hover:shadow-md transition-all">Criar Flashcards</button>
+                </div>
+
+                <!-- Simulados Card -->
+                <div id="simulados" class="card-hover bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Simulados com IA</h3>
+                    <p class="text-gray-600 mb-6">Geramos automaticamente questões personalizadas com base em seus objetivos de estudo, usando tecnologia de inteligência artificial avançada.</p>
+                    <ul class="space-y-2 mb-6">
+                        <li class="flex items-center text-sm text-gray-600">
+                            <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            Geração automática de questões
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            Personalização por nível de dificuldade
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            Feedback inteligente e explicativo
+                        </li>
+                    </ul>
+                    <button class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-lg font-medium hover:shadow-md transition-all">Gerar Simulado</button>
+                </div>
+
+                <!-- Collaboration Card -->
+                <div id="perfil" class="card-hover bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Colaboração em Equipe</h3>
+                    <p class="text-gray-600 mb-6">Compartilhe recursos, forme grupos de estudo e aprenda com professores e colegas de todo o país.</p>
+                    <ul class="space-y-2 mb-6">
+                        <li class="flex items-center text-sm text-gray-600">
+                            <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            Compartilhamento de conteúdos
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            Grupos de estudo virtuais
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            Mentoria entre pares
+                        </li>
+                    </ul>
+                    <button class="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 rounded-lg font-medium hover:shadow-md transition-all">Participar</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <span id="toastMessage"></span>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Entrar</h2>
+                <button id="closeLoginModal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form id="loginForm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" name="email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                        <input type="password" name="password" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <button type="submit" class="w-full btn-primary py-3 rounded-lg font-medium">Entrar</button>
+                </div>
+            </form>
+            <p class="text-center text-sm text-gray-600 mt-4">
+                Não tem conta? <a href="#" id="showSignup" class="text-blue-600 hover:text-blue-800 font-medium">Cadastre-se</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div id="signupModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Cadastrar</h2>
+                <button id="closeSignupModal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form id="signupForm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                        <input type="text" name="name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" name="email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                        <input type="password" name="password" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Você é</label>
+                        <select name="role" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="Aluno">Aluno</option>
+                            <option value="Professor">Professor</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full btn-primary py-3 rounded-lg font-medium">Cadastrar</button>
+                </div>
+            </form>
+            <p class="text-center text-sm text-gray-600 mt-4">
+                Já tem conta? <a href="#" id="showLogin" class="text-blue-600 hover:text-blue-800 font-medium">Entre aqui</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Create Resource Modal -->
+    <div id="createResourceModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Criar Recurso</h2>
+                <button id="closeCreateModal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <button id="createFlashcardBtn" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 py-4 rounded-lg font-medium flex items-center justify-center space-x-3 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <span>Criar Flashcards</span>
+                </button>
+                <button id="createQuizBtn" class="w-full bg-green-50 hover:bg-green-100 text-green-700 py-4 rounded-lg font-medium flex items-center justify-center space-x-3 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <span>Gerar Simulado</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flashcard Modal -->
+    <div id="flashcardModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Criar Flashcards</h2>
+                <button id="closeFlashcardModal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- AI Generation Section -->
+            <div class="ai-generate-section">
+                <div class="flex items-center mb-4">
+                    <div class="ai-icon">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">Gerar Flashcard com IA</h3>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">Digite um termo ou conceito e nossa IA criará um flashcard otimizado para memorização!</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Termo ou Conceito</label>
+                        <input type="text" id="aiTerm" placeholder="Ex: Fotossíntese, Segunda Guerra Mundial..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Contexto (opcional)</label>
+                        <input type="text" id="aiContext" placeholder="Ex: Biologia, História do Brasil..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                </div>
+                
+                <button id="generateAIFlashcard" class="btn-primary px-6 py-2 rounded-lg font-medium flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span>Gerar com IA</span>
+                </button>
+            </div>
+
+            <form id="flashcardForm">
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Título da Lista</label>
+                            <input type="text" name="title" required placeholder="Ex: Biologia - Fotossíntese" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Matéria</label>
+                            <select name="subject" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Selecione uma matéria</option>
+                                <option value="Matemática">Matemática</option>
+                                <option value="Português">Português</option>
+                                <option value="História">História</option>
+                                <option value="Geografia">Geografia</option>
+                                <option value="Biologia">Biologia</option>
+                                <option value="Química">Química</option>
+                                <option value="Física">Física</option>
+                                <option value="Inglês">Inglês</option>
+                                <option value="Filosofia">Filosofia</option>
+                                <option value="Sociologia">Sociologia</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Visibilidade</label>
+                        <div class="flex space-x-4">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="visibility" value="public" class="text-blue-600" checked>
+                                <span class="ml-2 text-sm text-gray-700">Público</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="visibility" value="private" class="text-blue-600">
+                                <span class="ml-2 text-sm text-gray-700">Privado</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Flashcards</label>
+                            <button type="button" id="addFlashcard" class="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center space-x-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                <span>Adicionar Cartão</span>
+                            </button>
+                        </div>
+                        
+                        <div id="flashcardList" class="space-y-4">
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Frente</label>
+                                        <input type="text" placeholder="Pergunta ou termo" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Verso</label>
+                                        <input type="text" placeholder="Resposta ou definição" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-4 pt-6">
+                        <button type="submit" class="flex-1 btn-primary py-2 rounded-lg font-medium">Criar Lista</button>
+                        <button type="button" id="cancelFlashcard" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-medium">Cancelar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quiz Modal -->
+    <div id="quizModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Gerar Simulado com IA</h2>
+                <button id="closeQuizModal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form id="quizForm">
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Título do Simulado</label>
+                            <input type="text" name="title" required placeholder="Ex: Matemática - Equações" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Matéria</label>
+                            <select name="subject" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Selecione uma matéria</option>
+                                <option value="Matemática">Matemática</option>
+                                <option value="Português">Português</option>
+                                <option value="História">História</option>
+                                <option value="Geografia">Geografia</option>
+                                <option value="Biologia">Biologia</option>
+                                <option value="Química">Química</option>
+                                <option value="Física">Física</option>
+                                <option value="Inglês">Inglês</option>
+                                <option value="Filosofia">Filosofia</option>
+                                <option value="Sociologia">Sociologia</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nível de Dificuldade</label>
+                            <select name="difficulty" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="Básico">Básico</option>
+                                <option value="Intermediário">Intermediário</option>
+                                <option value="Avançado">Avançado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Questões</label>
+                            <select name="questionsCount" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="5">5 questões</option>
+                                <option value="10">10 questões</option>
+                                <option value="15">15 questões</option>
+                                <option value="20">20 questões</option>
+                                <option value="25">25 questões</option>
+                                <option value="30">30 questões</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tópicos Específicos (opcional)</label>
+                        <textarea name="topics" rows="3" placeholder="Ex: Equações do segundo grau, Teorema de Pitágoras..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Exemplos de Questões (opcional)</label>
+                        <textarea name="examples" rows="4" placeholder="Insira exemplos de questões para orientar a IA (uma por linha)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Visibilidade</label>
+                        <div class="flex space-x-4">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="quizVisibility" value="public" class="text-blue-600" checked>
+                                <span class="ml-2 text-sm text-gray-700">Público</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="quizVisibility" value="private" class="text-blue-600">
+                                <span class="ml-2 text-sm text-gray-700">Privado</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-4 pt-6">
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-2 rounded-lg font-medium">
+                            <span class="submit-text">Gerar Simulado</span>
+                        </button>
+                        <button type="button" id="cancelQuiz" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-medium">Cancelar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="eduhub-frontend/js/config.js"></script>
+    <script src="eduhub-frontend/js/app.js"></script>
+</body>
+</html>
+
